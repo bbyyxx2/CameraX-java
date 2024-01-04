@@ -1,9 +1,18 @@
 package com.bbyyxx2.camerax;
 
+import static androidx.camera.core.ImageCapture.FLASH_MODE_AUTO;
+import static androidx.camera.core.ImageCapture.FLASH_MODE_OFF;
+import static androidx.camera.core.ImageCapture.FLASH_MODE_ON;
+
 import android.Manifest;
+import android.animation.Animator;
 import android.content.pm.PackageManager;
+import android.content.res.Configuration;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
+import android.view.ViewAnimationUtils;
+import android.widget.ImageButton;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -42,7 +51,8 @@ public class CameraXActivity extends AppCompatActivity {
     // 预览对象
     private Preview preview;
     // 相机对象
-    private Camera camera;
+//    private Camera camera;
+    private ImageCapture imageCapture;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -50,7 +60,91 @@ public class CameraXActivity extends AppCompatActivity {
         binding = ActivityCameraxBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
+        initListener();
         initPermission();
+    }
+
+    private void initListener() {
+        binding.btnFlash.setOnClickListener(v -> {
+            Animator animator = ViewAnimationUtils.createCircularReveal(binding.llFlashOptions,
+                    Math.round(v.getX()), Math.round(v.getY()), 0f, getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT ? v.getWidth() : v.getHeight());
+            animator.setDuration(500).addListener(new Animator.AnimatorListener() {
+                @Override
+                public void onAnimationStart(@NonNull Animator animation) {
+                    binding.llFlashOptions.setVisibility(View.VISIBLE);
+                }
+
+                @Override
+                public void onAnimationEnd(@NonNull Animator animation) {
+
+                }
+
+                @Override
+                public void onAnimationCancel(@NonNull Animator animation) {
+
+                }
+
+                @Override
+                public void onAnimationRepeat(@NonNull Animator animation) {
+
+                }
+            });
+            animator.start();
+        });
+
+        binding.btnFlashOn.setOnClickListener(v -> {
+            closeFlashAndSelect(FLASH_MODE_ON);
+        });
+
+        binding.btnFlashOff.setOnClickListener(v -> {
+            closeFlashAndSelect(FLASH_MODE_OFF);
+        });
+
+        binding.btnFlashAuto.setOnClickListener(v -> {
+            closeFlashAndSelect(FLASH_MODE_AUTO);
+        });
+    }
+    private int flashMode = FLASH_MODE_OFF;
+    private void closeFlashAndSelect(int flash){
+        ImageButton v = binding.btnFlash;
+        Animator animator = ViewAnimationUtils.createCircularReveal(binding.llFlashOptions,
+                Math.round(v.getX()) + v.getWidth() / 2, Math.round(v.getY()) + v.getHeight() / 2,
+                getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT ? v.getWidth() : v.getHeight(),
+                0f);
+        animator.setDuration(500).addListener(new Animator.AnimatorListener() {
+            @Override
+            public void onAnimationStart(@NonNull Animator animation) {
+                flashMode = flash;
+                switch (flash){
+                    case FLASH_MODE_OFF:
+                        v.setImageResource(R.drawable.ic_flash_off);
+                        break;
+                    case FLASH_MODE_ON:
+                        v.setImageResource(R.drawable.ic_flash_on);
+                        break;
+                    case FLASH_MODE_AUTO:
+                        v.setImageResource(R.drawable.ic_flash_auto);
+                        break;
+                }
+
+            }
+
+            @Override
+            public void onAnimationEnd(@NonNull Animator animation) {
+                binding.llFlashOptions.setVisibility(View.GONE);
+            }
+
+            @Override
+            public void onAnimationCancel(@NonNull Animator animation) {
+
+            }
+
+            @Override
+            public void onAnimationRepeat(@NonNull Animator animation) {
+
+            }
+        });
+        animator.start();
     }
 
     private static final int MY_PERMISSIONS_REQUEST = 1;
@@ -104,7 +198,8 @@ public class CameraXActivity extends AppCompatActivity {
             preview = new Preview.Builder().build();
             preview.setSurfaceProvider(binding.viewFinder.getSurfaceProvider());
 
-            ImageCapture imageCapture = new ImageCapture.Builder().build();
+            imageCapture = new ImageCapture.Builder().build();
+            imageCapture.setFlashMode(flashMode);
 
             ImageAnalysis imageAnalysis = new ImageAnalysis.Builder().build();
             imageAnalysis.setAnalyzer(Executors.newSingleThreadExecutor(), image -> {
